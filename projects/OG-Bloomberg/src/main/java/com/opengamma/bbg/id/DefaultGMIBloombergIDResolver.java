@@ -40,7 +40,7 @@ public final class DefaultGMIBloombergIDResolver implements GMIBloombergIDResolv
    */
   private static final DefaultGMIBloombergIDResolver s_instance = new DefaultGMIBloombergIDResolver();
   
-  private List<File> _mappingFiles = Lists.newArrayList();  
+  private Collection<File> _mappingFiles = Lists.newArrayList();  
   private Map<ExternalId, BloombergContractID> _jpm2BloombergTicker = Maps.newHashMap();
   
   /**
@@ -73,7 +73,7 @@ public final class DefaultGMIBloombergIDResolver implements GMIBloombergIDResolv
    * Gets the mappingFiles.
    * @return the mappingFiles
    */
-  public List<File> getMappingFiles() {
+  public Collection<File> getMappingFiles() {
     return ImmutableList.copyOf(_mappingFiles);
   }
 
@@ -84,7 +84,7 @@ public final class DefaultGMIBloombergIDResolver implements GMIBloombergIDResolv
    *
    * @param mappingFiles  the mappingFiles
    */
-  public void setMappingFiles(List<File> mappingFiles) {
+  public void setMappingFiles(Collection<File> mappingFiles) {
     ArgumentChecker.notNull(mappingFiles, "mapping files");
     _mappingFiles.clear();
     _mappingFiles.addAll(mappingFiles);
