@@ -8,8 +8,8 @@ package com.opengamma.bbg.id;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang.StringUtils;
 import org.fudgemsg.FudgeMsg;
@@ -86,25 +86,54 @@ public final class DefaultGMIBloombergIDResolver implements GMIBloombergIDResolv
    */
   public void setMappingFiles(Collection<File> mappingFiles) {
     ArgumentChecker.notNull(mappingFiles, "mapping files");
-    _mappingFiles.clear();
+    resetMappingTable();
     _mappingFiles.addAll(mappingFiles);
     buildMappingTable();
   }
+
+  private void resetMappingTable() {
+    _mappingFiles.clear();
+    _jpm2BloombergTicker.clear();
+  }
   
   private void buildMappingTable() {
+    Map<File, Map<ExternalId, BloombergContractID>> filePerMapping = Maps.newHashMap();
     for (File mappingFile : _mappingFiles) {
+      Map<ExternalId, BloombergContractID> gmiMapping = filePerMapping.get(mappingFile);
+      if (gmiMapping == null) {
+        gmiMapping = Maps.newHashMap();
+        filePerMapping.put(mappingFile, gmiMapping);
+      }
       try {
         CSVDocumentReader csvDocumentReader = new CSVDocumentReader(mappingFile.toURI().toURL());
         for (FudgeMsg row : csvDocumentReader) {
           String bloombergID = row.getString(BLOOMBERG_HEADER);
           if (isValidID(bloombergID)) {
             String[] bbgIdParts = StringUtils.split(bloombergID);
-            _jpm2BloombergTicker.put(ExternalSchemes.gmiSecurityId(row.getString(GMI_HEADER)), new BloombergContractID(bbgIdParts[0], bbgIdParts[1]));
+            ExternalId gmiSecurityId = ExternalSchemes.gmiSecurityId(row.getString(GMI_HEADER));
+            BloombergContractID bbgContractID = new BloombergContractID(bbgIdParts[0], bbgIdParts[1]);
+            _jpm2BloombergTicker.put(gmiSecurityId, bbgContractID);
+            gmiMapping.put(gmiSecurityId, bbgContractID);
           }
         }
       } catch (MalformedURLException ex) {
         s_logger.warn("Error reading mapping file " + mappingFile.getAbsolutePath(), ex);
       }
+    }
+    if (s_logger.isDebugEnabled()) {
+      printMappingTable(filePerMapping);
+    }
+  }
+
+  private void printMappingTable(Map<File, Map<ExternalId, BloombergContractID>> filePerMapping) {
+    for (Entry<File, Map<ExternalId, BloombergContractID>> entry : filePerMapping.entrySet()) {
+      File mappingFile = entry.getKey();
+      Map<ExternalId, BloombergContractID> gmiMapping = entry.getValue();
+      StringBuilder buf = new StringBuilder();
+      for (Entry<ExternalId, BloombergContractID> gmiEntry : gmiMapping.entrySet()) {
+        buf.append("\t").append(gmiEntry.getKey().getValue()).append(":").append(gmiEntry.getValue().getContractCode()).append(" ").append(gmiEntry.getValue().getMarketSector()).append("\n");
+      }
+      s_logger.debug("mappings for {}\n{}\n", mappingFile.getAbsolutePath(), buf.toString());
     }
   }
 
